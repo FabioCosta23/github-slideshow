@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,16 @@ import (
 func LoadReceiptP2K() {
 	fmt.Println("GET Docs", jodaTime.Format("YYYY-MM-dd HH:mm:ss", time.Now()))
 
+	err := Setup()
+	if err != nil {
+		logrus.Errorf("error to setup db instance")
+		return
+	}
+	// if GetEnv("ENVIRONMENT") != "local" {
+	// 	tracer.Start(tracer.WithService("stock-worker"))
+	// 	defer tracer.Stop()
+	// }
+
 	distributionCenters, err := GetDistributionCenters()
 	if err != nil {
 		fmt.Println(ErrPrefix, err)
@@ -30,14 +41,14 @@ func LoadReceiptP2K() {
 		fmt.Println(ErrPrefix, err)
 	}
 
-	// for i, docs := range ReceiptList {
-	// 	fmt.Printf("NF[%d]: %v / Qtd Itens: %d\r\n", i, docs.Number, len(docs.Items))
-	// 	fmt.Println(docs)
-	// }
+	for i, docs := range ReceiptList {
+		fmt.Printf("NF[%d]: %v / Qtd Itens: %d\r\n", i, docs.Number, len(docs.Items))
+		fmt.Println(docs)
+	}
 
-	// fmt.Println("\nFinalizada pesquisa no P2K..: ", jodaTime.Format("YYYY-MM-dd HH:mm:ss", time.Now()))
-	// fmt.Println("Notas carregadas......: ", strconv.Itoa(len(ReceiptList)))
-	// fmt.Println("Processo finalizado...: ", jodaTime.Format("YYYY-MM-dd HH:mm:ss", time.Now()))
+	fmt.Println("\nFinalizada pesquisa no P2K..: ", jodaTime.Format("YYYY-MM-dd HH:mm:ss", time.Now()))
+	fmt.Println("Notas carregadas......: ", strconv.Itoa(len(ReceiptList)))
+	fmt.Println("Processo finalizado...: ", jodaTime.Format("YYYY-MM-dd HH:mm:ss", time.Now()))
 
 	err = sendReceiptStockConsumer(ReceiptList)
 	if err != nil {
@@ -80,7 +91,11 @@ func sendReceiptStockConsumer(receiptList []Receipt) error {
 				Value: []byte(objJson),
 			},
 		)
-		fmt.Println("JSON enviado para o topico: ", recepitKey)
+		if err != nil {
+			return err
+		} else {
+			fmt.Println("JSON enviado para o topico: ", receipt)
+		}
 	}
 	if err := writer.Close(); err != nil {
 		log.Fatal("failed to close writer:", err)
@@ -88,16 +103,3 @@ func sendReceiptStockConsumer(receiptList []Receipt) error {
 
 	return nil
 }
-
-// const (
-// 	DISTRIBUTION_CENTER_ID int = 3333
-// 	STOCK_TYPE_ID          int = 1
-// )
-
-// var (
-// 	gerestRepository GerestRepository
-// )
-
-// func init() {
-// 	gerestRepository = &GerestRepositoryImpl{}
-// }

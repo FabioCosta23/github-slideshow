@@ -28,9 +28,14 @@ func Setup() (err error) {
 
 func setupDbInstance() (*sql.DB, error) {
 	sqltrace.Register("pgx", &pgx.Driver{}, sqltrace.WithServiceName("stock-worker-db"))
+
+	fmt.Println("CONN STRING: ", getConnectionString())
+
 	db, err := sqltrace.Open("pgx", getConnectionString())
 	if err != nil {
 		return nil, err
+	} else {
+		fmt.Println("CONCETADO STOCK")
 	}
 
 	db.SetMaxIdleConns(GetEnvInt("DB_MAX_IDLE_CONNS"))
@@ -47,8 +52,7 @@ func setupDbInstance() (*sql.DB, error) {
 }
 
 func getConnectionString() string {
-	return fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=disable", GetEnv("DB_HOST"), GetEnv("DB_PORT"),
-		GetEnv("DB_USER"), GetEnv("DB_PASSWORD"), GetEnv("DB_NAME"))
+	return fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=disable", GetEnv("DB_HOST"), GetEnv("DB_PORT"), GetEnv("DB_USER"), GetEnv("DB_PASSWORD"), GetEnv("DB_NAME"))
 }
 
 type DatabaseCommons interface {

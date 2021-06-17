@@ -5,7 +5,6 @@ import (
 )
 
 // Get store document from ID
-// func GetDistributionCenters() (distributionCenters map[string]string, err error) {
 func GetDistributionCenters() (distributionCenters map[string]string, err error) {
 
 	sqlQueryParams := `select document, id from distribution_center`
@@ -16,6 +15,8 @@ func GetDistributionCenters() (distributionCenters map[string]string, err error)
 		return distributionCenters, err
 	}
 	defer rows.Close()
+
+	distributionCenters = map[string]string{}
 
 	for rows.Next() {
 		var document, id string

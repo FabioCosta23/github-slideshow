@@ -9,7 +9,8 @@ var config = map[string]string{
 	"DB_P2K_HOST":     "172.16.154.105",
 	"DB_P2K_NAME":     "p2k",
 
-	"RECEIPT_GET_INTERVAL":     "10",
+	"RECEIPT_INTERVAL":         "5",
+	"RECEIPT_DATE":             "20210531",
 	"SENDER_ID":                "P2K",
 	"KAFKA_HOST":               "localhost:9092",
 	"KAFKA_USERNAME":           "",

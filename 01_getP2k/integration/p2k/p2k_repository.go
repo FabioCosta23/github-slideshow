@@ -11,24 +11,31 @@ import (
 	"github.com/vjeantet/jodaTime"
 )
 
-// const P2KConnectString = "oracle://app_stock_worker:rkrCuEw3j@172.16.154.105/p2k"
-
 // Get recepits on P2K front-end database
 // DistributionCenterDestination, CNPJOrigin and CNPJDestination not available in data origin.
 func GetStoreReceipt(distributionCenters map[string]string) ([]Receipt, error) {
 
 	var receiptList []Receipt
-
-	transactionDate, err := strconv.Atoi(jodaTime.Format("YYYYMMdd", time.Now()))
-	if err != nil {
-		return receiptList, err
-	}
-
-	transactionDate = 20210531
+	var transactionDate int
+	var lastMinutesFilter string
+	var err error
 
 	P2KConnectString := fmt.Sprintf("%s://%s:%s@%s/%s", GetEnv("DB_P2K_DRIVER"), GetEnv("DB_P2K_USER"), GetEnv("DB_P2K_PASSWORD"), GetEnv("DB_P2K_HOST"), GetEnv("DB_P2K_NAME"))
 
-	fmt.Println(ErrPrefix, "Conn: ", P2KConnectString)
+	if GetEnv("ENVIRONMENT") != "local" {
+		transactionDate, err = strconv.Atoi(jodaTime.Format("YYYYMMdd", time.Now()))
+		if err != nil {
+			return receiptList, err
+		}
+		lastMinutesFilter = fmt.Sprintf(" and a.data_impr_fechamento_cupom >= sysdate - (interval '%s' minute) ", GetEnv("RECEIPT_INTERVAL"))
+	} else {
+		transactionDate, err = strconv.Atoi(GetEnv("RECEIPT_DATE"))
+		if err != nil {
+			return receiptList, err
+		}
+		fmt.Println(ErrPrefix, "Conn..: ", P2KConnectString)
+		fmt.Println(ErrPrefix, "Params: ", transactionDate, GetEnv("RECEIPT_INTERVAL"))
+	}
 
 	sqlQuery := fmt.Sprintf(`select 1 as businessUnit
 	                              , trim(to_char(a.codigo_loja, '0000')) as distr_origin
@@ -52,14 +59,8 @@ func GetStoreReceipt(distributionCenters map[string]string) ([]Receipt, error) {
                                and a.nsu_transacao = b.nsu_transacao
                                and a.tipo_venda in (1,9)
                                and b.status_item = 'V'
-			            	   and a.data_transacao = %d
-                             order by (case a.tipo_venda when 9 then a.numero_nfe else a.numero_cupom end), b.num_seq_produto `, transactionDate) // order by required
-
-	// Formato com parametros
-	//  and a.data_transacao = $1
-	//  and a.data_transacao = %d and a.data_impr_fechamento_cupom >= sysdate - (interval '$2' minute)
-
-	fmt.Println(ErrPrefix, "Params: ", transactionDate, GetEnv("RECEIPT_GET_INTERVAL"))
+			            	   and a.data_transacao = %d %s
+                             order by (case a.tipo_venda when 9 then a.numero_nfe else a.numero_cupom end), b.num_seq_produto `, transactionDate, lastMinutesFilter) // order by required
 
 	conn, err := sql.Open("oracle", P2KConnectString)
 	if err != nil {
@@ -92,8 +93,10 @@ func GetStoreReceipt(distributionCenters map[string]string) ([]Receipt, error) {
 
 	defer rows.Close()
 
-	fmt.Println("Querying P2K database...")
-	fmt.Println(sqlQuery)
+	if GetEnv("ENVIRONMENT") == "local" {
+		fmt.Println("Querying P2K database...")
+		fmt.Println(sqlQuery)
+	}
 
 	defer rows.Close()
 
@@ -122,12 +125,11 @@ func GetStoreReceipt(distributionCenters map[string]string) ([]Receipt, error) {
 			&receiptGet.Quantity)
 
 		if err != nil {
-			fmt.Println(ErrPrefix, "ERROR: Nota: ", receiptGet.DistributionCenterOrigin, "/", receiptGet.Series, "/", receiptGet.Number, " | ", err.Error())
+			fmt.Println(ErrPrefix, "ERROR Doc: ", receiptGet.DistributionCenterOrigin, "/", receiptGet.Series, "/", receiptGet.Number, " | ", err.Error())
 			break
 		}
 
 		receiptGet.UniqueKey = fmt.Sprintf("%s_%d_%s_%s", receiptGet.DistributionCenterOrigin, receiptGet.Number, receiptGet.Series, receiptGet.Type)
-		// fmt.Println(ErrPrefix, "KEY: ", receiptGet.UniqueKey)
 
 		if receiptGet.UniqueKey != lastUniqueKey {
 			lastUniqueKey = fmt.Sprintf("%s_%d_%s_%s", receiptGet.DistributionCenterOrigin, receiptGet.Number, receiptGet.Series, receiptGet.Type)
