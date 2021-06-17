@@ -1,4 +1,4 @@
-module github.com/grupo-sbf/go_Sandbox
+module github.com/FabioCosta23/go_Sandbox
 
 go 1.16
 
